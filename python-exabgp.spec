@@ -1,7 +1,7 @@
 %if 0%{?fedora}
 %global with_python3 1
 %endif
-%global srcname exabgp 
+%global srcname exabgp
 
 Name:           python-exabgp
 Version:        4.0.1
@@ -23,14 +23,15 @@ Group:          Applications/Internet
 BuildRequires:  systemd-units
 BuildRequires:  python2
 BuildRequires:  python2-devel
-BuildRequires:  python-setuptools
+BuildRequires:  python2-setuptools
 Requires:       python-ipaddr
-Requires:       python-six
+Requires:       python2-six
+Requires:       python-exabgp
 Requires:       systemd
 Requires: %{name} = %{version}-%{release}
 
 %description -n python2-%{srcname}
-The BGP swiss army knife of networking 
+The BGP swiss army knife of networking
 
 %if 0%{?with_python3}
 %package -n python3-%{srcname}
@@ -39,8 +40,9 @@ Group:          Applications/Internet
 BuildRequires:  systemd-units
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
-Requires:       python3-ipaddr
+Requires:       python-ipaddr
 Requires:       python3-six
+Requires:       python-exabgp
 Requires:       systemd
 Requires: %{name} = %{version}-%{release}
 %endif
@@ -55,19 +57,19 @@ The BGP swiss army knife of networking
 %py2_build
 %if 0%{?with_python3}
 %py3_build
-%endif 
+%endif
 
 %install
 %py2_install
 %if 0%{?with_python3}
 %py3_install
-%endif 
+%endif
 
 %check
 %{__python2} setup.py test
 %if 0%{?with_python3}
 %{__python3} setup.py test
-%endif 
+%endif
 
 install bin/healthcheck %{buildroot}%{_bindir}
 mv %{buildroot}%{_bindir} %{buildroot}%{_sbindir}
@@ -125,7 +127,7 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %attr(744, root, root) %{_datadir}/exabgp/processes/*
 %{_mandir}/man1/*
 %{_mandir}/man5/*
-%endif 
+%endif
 
 %changelog
 * Fri Jul 07 2017 Luke Hinds <lhinds@redhat.com> - 4.0.1

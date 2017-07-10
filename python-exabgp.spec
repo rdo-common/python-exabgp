@@ -20,15 +20,15 @@ ExaBGP python module
 %package -n python2-%{srcname}
 Summary:        The BGP swiss army knife of networking
 Group:          Applications/Internet
-BuildRequires:  systemd-units
-BuildRequires:  python2
 BuildRequires:  python2-devel
 BuildRequires:  python2-setuptools
-Requires:       python-ipaddr
 Requires:       python2-six
-Requires:       python-exabgp
-Requires:       systemd
-Requires: %{name} = %{version}-%{release}
+# XXX: only required for healthcheck.py on python2
+# healthcheck.py is in service package, but it simplifies packaging to put it here
+# According code, it tries to load ipaddress then ipaddr, since ipaddr is unmaintained
+# Let's stick to ipaddress which is backport from python3 stdlib
+Requires:       python-ipaddress
+%{?python_provide:%python_provide python2-%{srcname}}
 
 %description -n python2-%{srcname}
 The BGP swiss army knife of networking
@@ -37,18 +37,25 @@ The BGP swiss army knife of networking
 %package -n python3-%{srcname}
 Summary:        The BGP swiss army knife of networking
 Group:          Applications/Internet
-BuildRequires:  systemd-units
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
-Requires:       python-ipaddr
 Requires:       python3-six
-Requires:       python-exabgp
-Requires:       systemd
-Requires: %{name} = %{version}-%{release}
+%{?python_provide:%python_provide python3-%{srcname}}
 %endif
 
 %description -n python3-%{srcname}
 The BGP swiss army knife of networking
+
+%package -n exabgp
+Summary:        The BGP swiss army knife of networking
+Group:          Applications/Internet
+BuildRequires:  systemd-units
+Requires:       systemd
+# XXX: when python3 variant becomes default, change to python3 subpackage
+Requires:                   python2-%{srcname} = %{version}-%{release}
+
+%description -n exabgp
+The BGP swiss army knife of networking (exabgp systemd unit)
 
 %prep
 %autosetup -n %{srcname}-%{version}
@@ -60,10 +67,20 @@ The BGP swiss army knife of networking
 %endif
 
 %install
-%py2_install
+# Now, we'll ensure that our python2 binaries does not get overwritten
+# XXX: setup.py installs binaries in /usr/bin but systemd unit expects it to be in /usr/sbin
+mkdir -p %{buildroot}%{_sbindir}
 %if 0%{?with_python3}
 %py3_install
+mv %{buildroot}%{_bindir}/%{srcname} %{buildroot}%{_sbindir}/%{srcname}-%{python3_version}
+ln -s ./%{srcname}-%{python3_version} %{buildroot}%{_sbindir}/%{srcname}-3
 %endif
+
+%py2_install
+mv %{buildroot}%{_bindir}/%{srcname} %{buildroot}%{_sbindir}/%{srcname}-%{python2_version}
+ln -s ./%{srcname}-%{python2_version} %{buildroot}%{_sbindir}/%{srcname}-2
+# Symbolic link to default exabgp binary variant (python2)
+ln -s ./%{srcname}-2 %{buildroot}%{_sbindir}/%{srcname}
 
 %check
 %{__python2} setup.py test
@@ -71,63 +88,59 @@ The BGP swiss army knife of networking
 %{__python3} setup.py test
 %endif
 
-install bin/healthcheck %{buildroot}%{_bindir}
-mv %{buildroot}%{_bindir} %{buildroot}%{_sbindir}
-mv %{buildroot}%{_sbindir}/healthcheck %{buildroot}/%{_sbindir}/exabgp-healthcheck
+# Install health check
+install -p -D -m 0755 bin/healthcheck %{buildroot}%{_sbindir}
+mv %{buildroot}%{_sbindir}/healthcheck %{buildroot}/%{_sbindir}/%{srcname}-healthcheck
 
+# Configure required directories for the exabgp service
 mkdir -p %{buildroot}/%{_sysconfdir}/exabgp
 mkdir -p %{buildroot}/%{_libdir}/exabgp
-
+# Install exabgp systemd unit
 mkdir -p %{buildroot}/%{_unitdir}
-install -p -D -m 0644 etc/systemd/exabgp.service %{buildroot}/%{_unitdir}/exabgp.service
+install -p -D -m 0644 etc/systemd/%{srcname}.service %{buildroot}/%{_unitdir}/%{srcname}.service
 
+# Install man pages
 mkdir -p %{buildroot}/%{_mandir}/man1
 install doc/man/exabgp.1 %{buildroot}/%{_mandir}/man1
-
 mkdir -p %{buildroot}/%{_mandir}/man5
 install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 
-%post -n %{name}
-%systemd_post exabgp.service
+%post -n exabgp
+%systemd_post %{srcname}.service
 
-%preun -n %{name}
-%systemd_preun exabgp.service
+%preun -n exabgp
+%systemd_preun %{srcname}.service
 
-%postun -n %{name}
-%systemd_postun_with_restart exabgp.service
+%postun -n exabgp
+%systemd_postun_with_restart %{srcname}.service
 
 %files -n python2-%{srcname}
-%{python2_sitelib}/*
-%defattr(-,root,root,-)
 %doc CHANGELOG README.md
+%{python2_sitelib}/*
+# XXX: when python3 variant becomes default, move next line to python3 subpackage
+%{_sbindir}/%{srcname}
+%{_sbindir}/%{srcname}-2*
 %license COPYRIGHT
-%{_unitdir}/exabgp.service
-%{_sbindir}/exabgp
-%dir %{_libdir}/exabgp
-%dir %{_datadir}/exabgp
-%dir %{_datadir}/exabgp/processes
-%dir %{_sysconfdir}/exabgp
-%attr(744, root, root) %{_datadir}/exabgp/processes/*
-%{_mandir}/man1/*
-%{_mandir}/man5/*
 
 %if 0%{?with_python3}
 %files -n python3-%{srcname}
 %{python3_sitelib}/*
-%defattr(-,root,root,-)
+%{_sbindir}/%{srcname}-3*
 %doc CHANGELOG README.md
 %license COPYRIGHT
-%attr(755, root, root) %{_sbindir}/exabgp-healthcheck
-%{_unitdir}/exabgp.service
-%{_sbindir}/exabgp
-%dir %{_libdir}/exabgp
-%dir %{_datadir}/exabgp
-%dir %{_datadir}/exabgp/processes
-%dir %{_sysconfdir}/exabgp
-%attr(744, root, root) %{_datadir}/exabgp/processes/*
+%endif
+
+# Let's split out exabgp service here
+%files -n exabgp
+%attr(755, root, root) %{_sbindir}/%{srcname}-healthcheck
+%{_unitdir}/%{srcname}.service
+%dir %{_libdir}/%{srcname}
+%dir %{_datadir}/%{srcname}
+%dir %{_datadir}/%{srcname}/processes
+%dir %{_sysconfdir}/%{srcname}
+%attr(744, root, root) %{_datadir}/%{srcname}/processes/*
 %{_mandir}/man1/*
 %{_mandir}/man5/*
-%endif
 
 %changelog
 * Fri Jul 07 2017 Luke Hinds <lhinds@redhat.com> - 4.0.1

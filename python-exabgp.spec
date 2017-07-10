@@ -5,7 +5,7 @@
 
 Name:           python-exabgp
 Version:        4.0.1
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        The BGP swiss army knife of networking (Library)
 
 License:        BSD
@@ -143,6 +143,8 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %{_mandir}/man5/*
 
 %changelog
+* Fri Jul 10 2017 Luke Hinds <lhinds@redhat.com> - 4.0.1-2
+- Fixed dependency issues
 * Fri Jul 07 2017 Luke Hinds <lhinds@redhat.com> - 4.0.1
 - 4.0.1 release, and python 3 support
 * Fri May 19 2017 Luke Hinds <lhinds@redhat.com> - 4.0.0

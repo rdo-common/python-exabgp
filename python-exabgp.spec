@@ -5,7 +5,7 @@
 
 Name:           python-exabgp
 Version:        4.0.1
-Release:        3%{?dist}
+Release:        4%{?dist}
 Summary:        The BGP swiss army knife of networking (Library)
 
 License:        BSD
@@ -27,7 +27,7 @@ Requires:       python2-six
 # healthcheck.py is in service package, but it simplifies packaging to put it here
 # According code, it tries to load ipaddress then ipaddr, since ipaddr is unmaintained
 # Let's stick to ipaddress which is backport from python3 stdlib
-Requires:       python-ipaddress
+Requires:       python2-ipaddress
 %{?python_provide:%python_provide python2-%{srcname}}
 
 %description -n python2-%{srcname}
@@ -143,6 +143,10 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %{_mandir}/man5/*
 
 %changelog
+* Tue Jan 16 2018 Iryna Shcherbina <ishcherb@redhat.com> - 4.0.1-4
+- Update Python 2 dependency declarations to new packaging standards
+  (See https://fedoraproject.org/wiki/FinalizingFedoraSwitchtoPython3)
+
 * Thu Jul 27 2017 Fedora Release Engineering <releng@fedoraproject.org> - 4.0.1-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Mass_Rebuild
 

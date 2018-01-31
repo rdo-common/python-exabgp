@@ -4,7 +4,7 @@
 %global srcname exabgp
 
 Name:           python-exabgp
-Version:        4.0.1
+Version:        4.0.5
 Release:        4%{?dist}
 Summary:        The BGP swiss army knife of networking (Library)
 

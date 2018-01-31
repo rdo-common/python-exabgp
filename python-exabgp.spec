@@ -41,10 +41,10 @@ BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 Requires:       python3-six
 %{?python_provide:%python_provide python3-%{srcname}}
-%endif
 
 %description -n python3-%{srcname}
 The BGP swiss army knife of networking
+%endif
 
 %package -n exabgp
 Summary:        The BGP swiss army knife of networking

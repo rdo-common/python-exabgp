@@ -92,6 +92,9 @@ ln -s ./%{srcname}-2 %{buildroot}%{_sbindir}/%{srcname}
 install -p -D -m 0755 bin/healthcheck %{buildroot}%{_sbindir}
 mv %{buildroot}%{_sbindir}/healthcheck %{buildroot}/%{_sbindir}/%{srcname}-healthcheck
 
+# Install exabgpcli
+install -p -D -m 0755 bin/exabgpcli %{buildroot}%{_bindir}
+
 # Configure required directories for the exabgp service
 mkdir -p %{buildroot}/%{_sysconfdir}/exabgp
 mkdir -p %{buildroot}/%{_libdir}/exabgp
@@ -133,6 +136,7 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 # Let's split out exabgp service here
 %files -n exabgp
 %attr(755, root, root) %{_sbindir}/%{srcname}-healthcheck
+%attr(755, root, root) %{_bindir}/exabgpcli
 %{_unitdir}/%{srcname}.service
 %dir %{_libdir}/%{srcname}
 %dir %{_datadir}/%{srcname}
@@ -143,6 +147,9 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %{_mandir}/man5/*
 
 %changelog
+* Wed Jan 31 2018 Luke Hinds <lhinds@redhat.com> - 4.0.5
+- 4.0.5 release
+
 * Tue Jan 16 2018 Iryna Shcherbina <ishcherb@redhat.com> - 4.0.1-4
 - Update Python 2 dependency declarations to new packaging standards
   (See https://fedoraproject.org/wiki/FinalizingFedoraSwitchtoPython3)

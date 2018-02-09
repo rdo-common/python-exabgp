@@ -5,7 +5,7 @@
 
 Name:           python-exabgp
 Version:        4.0.5
-Release:        4%{?dist}
+Release:        5%{?dist}
 Summary:        The BGP swiss army knife of networking (Library)
 
 License:        BSD
@@ -147,6 +147,9 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %{_mandir}/man5/*
 
 %changelog
+* Fri Feb 09 2018 Fedora Release Engineering <releng@fedoraproject.org> - 4.0.5-5
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_28_Mass_Rebuild
+
 * Wed Jan 31 2018 Luke Hinds <lhinds@redhat.com> - 4.0.5
 - 4.0.5 release
 

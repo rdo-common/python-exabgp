@@ -1,15 +1,12 @@
-%if 0%{?fedora}
-%global with_python3 1
-%endif
 %global srcname exabgp
 
 Name:           python-exabgp
-Version:        4.0.5
-Release:        7%{?dist}
+Version:        4.0.10
+Release:        1%{?dist}
 Summary:        The BGP swiss army knife of networking (Library)
 
 License:        BSD
-URL:            https://github.com/Exa-Networks/
+URL:            https://github.com/Exa-Networks/exabgp
 Source0:        https://github.com/Exa-Networks/%{srcname}/archive/%{version}.tar.gz
 
 BuildArch:      noarch
@@ -17,76 +14,40 @@ BuildArch:      noarch
 %description
 ExaBGP python module
 
-%package -n python2-%{srcname}
-Summary:        The BGP swiss army knife of networking
-Group:          Applications/Internet
-BuildRequires:  python2-devel
-BuildRequires:  python2-setuptools
-Requires:       python2-six
-# XXX: only required for healthcheck.py on python2
-# healthcheck.py is in service package, but it simplifies packaging to put it here
-# According code, it tries to load ipaddress then ipaddr, since ipaddr is unmaintained
-# Let's stick to ipaddress which is backport from python3 stdlib
-Requires:       python2-ipaddress
-%{?python_provide:%python_provide python2-%{srcname}}
 
-%description -n python2-%{srcname}
-The BGP swiss army knife of networking
-
-%if 0%{?with_python3}
 %package -n python3-%{srcname}
 Summary:        The BGP swiss army knife of networking
-Group:          Applications/Internet
 BuildRequires:  python3-devel
 BuildRequires:  python3-setuptools
 Requires:       python3-six
+Conflicts:      python2-%{srcname} < 4.0.10
 %{?python_provide:%python_provide python3-%{srcname}}
 
 %description -n python3-%{srcname}
 The BGP swiss army knife of networking
-%endif
 
 %package -n exabgp
 Summary:        The BGP swiss army knife of networking
-Group:          Applications/Internet
 BuildRequires:  systemd-units
 Requires:       systemd
-# XXX: when python3 variant becomes default, change to python3 subpackage
-Requires:                   python2-%{srcname} = %{version}-%{release}
+Requires:       python3-%{srcname} = %{version}-%{release}
 
 %description -n exabgp
 The BGP swiss army knife of networking (exabgp systemd unit)
 
 %prep
 %autosetup -n %{srcname}-%{version}
+pathfix.py -pni "%{__python3} %{py3_shbang_opts}" etc/exabgp/run/*
 
 %build
-%py2_build
-%if 0%{?with_python3}
 %py3_build
-%endif
 
 %install
-# Now, we'll ensure that our python2 binaries does not get overwritten
+%py3_install
+
 # XXX: setup.py installs binaries in /usr/bin but systemd unit expects it to be in /usr/sbin
 mkdir -p %{buildroot}%{_sbindir}
-%if 0%{?with_python3}
-%py3_install
-mv %{buildroot}%{_bindir}/%{srcname} %{buildroot}%{_sbindir}/%{srcname}-%{python3_version}
-ln -s ./%{srcname}-%{python3_version} %{buildroot}%{_sbindir}/%{srcname}-3
-%endif
-
-%py2_install
-mv %{buildroot}%{_bindir}/%{srcname} %{buildroot}%{_sbindir}/%{srcname}-%{python2_version}
-ln -s ./%{srcname}-%{python2_version} %{buildroot}%{_sbindir}/%{srcname}-2
-# Symbolic link to default exabgp binary variant (python2)
-ln -s ./%{srcname}-2 %{buildroot}%{_sbindir}/%{srcname}
-
-%check
-%{__python2} setup.py test
-%if 0%{?with_python3}
-%{__python3} setup.py test
-%endif
+mv %{buildroot}%{_bindir}/%{srcname} %{buildroot}%{_sbindir}/
 
 # Install health check
 install -p -D -m 0755 bin/healthcheck %{buildroot}%{_sbindir}
@@ -117,25 +78,16 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %postun -n exabgp
 %systemd_postun_with_restart %{srcname}.service
 
-%files -n python2-%{srcname}
-%doc CHANGELOG README.md
-%{python2_sitelib}/*
-# XXX: when python3 variant becomes default, move next line to python3 subpackage
-%{_sbindir}/%{srcname}
-%{_sbindir}/%{srcname}-2*
-%license COPYRIGHT
 
-%if 0%{?with_python3}
 %files -n python3-%{srcname}
-%{python3_sitelib}/*
-%{_sbindir}/%{srcname}-3*
 %doc CHANGELOG README.md
 %license COPYRIGHT
-%endif
+%{python3_sitelib}/*
 
 # Let's split out exabgp service here
 %files -n exabgp
 %attr(755, root, root) %{_sbindir}/%{srcname}-healthcheck
+%attr(755, root, root) %{_sbindir}/%{srcname}
 %attr(755, root, root) %{_bindir}/exabgpcli
 %{_unitdir}/%{srcname}.service
 %dir %{_libdir}/%{srcname}
@@ -147,6 +99,9 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %{_mandir}/man5/*
 
 %changelog
+* Fri Dec 28 2018 Miro Hrončok <mhroncok@redhat.com> - 4.0.10-1
+- Update to 4.0.10, Python 3 only
+
 * Sat Jul 14 2018 Fedora Release Engineering <releng@fedoraproject.org> - 4.0.5-7
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_29_Mass_Rebuild
 

@@ -1,3 +1,6 @@
+%if 0%{?fedora} || 0%{?rhel} > 7
+%global with_python3 1
+%endif
 %global srcname exabgp
 
 Name:           python-exabgp
@@ -14,7 +17,23 @@ BuildArch:      noarch
 %description
 ExaBGP python module
 
+%package -n python2-%{srcname}
+Summary:        The BGP swiss army knife of networking
+Group:          Applications/Internet
+BuildRequires:  python2-devel
+BuildRequires:  python2-setuptools
+Requires:       python2-six
+# XXX: only required for healthcheck.py on python2
+# healthcheck.py is in service package, but it simplifies packaging to put it here
+# According code, it tries to load ipaddress then ipaddr, since ipaddr is unmaintained
+# Let's stick to ipaddress which is backport from python3 stdlib
+Requires:       python2-ipaddress
+%{?python_provide:%python_provide python2-%{srcname}}
 
+%description -n python2-%{srcname}
+The BGP swiss army knife of networking
+
+%if 0%{?with_python3}
 %package -n python3-%{srcname}
 Summary:        The BGP swiss army knife of networking
 BuildRequires:  python3-devel
@@ -25,29 +44,55 @@ Conflicts:      python2-%{srcname} < 4.0.10
 
 %description -n python3-%{srcname}
 The BGP swiss army knife of networking
+%endif
 
 %package -n exabgp
 Summary:        The BGP swiss army knife of networking
+Group:          Applications/Internet
 BuildRequires:  systemd-units
 Requires:       systemd
+%if 0%{?fedora} || 0%{?rhel} > 7
 Requires:       python3-%{srcname} = %{version}-%{release}
+%else
+Requires:       python2-%{srcname} = %{version}-%{release}
+%endif
 
 %description -n exabgp
 The BGP swiss army knife of networking (exabgp systemd unit)
 
 %prep
 %autosetup -n %{srcname}-%{version}
+%if 0%{?fedora} || 0%{?rhel} > 7
 pathfix.py -pni "%{__python3} %{py3_shbang_opts}" etc/exabgp/run/*
+%endif
 
 %build
+%py2_build
+%if 0%{?with_python3}
 %py3_build
+%endif
 
 %install
-%py3_install
-
+# Now, we'll ensure that our python2 binaries does not get overwritten
 # XXX: setup.py installs binaries in /usr/bin but systemd unit expects it to be in /usr/sbin
 mkdir -p %{buildroot}%{_sbindir}
-mv %{buildroot}%{_bindir}/%{srcname} %{buildroot}%{_sbindir}/
+%if 0%{?with_python3}
+%py3_install
+mv %{buildroot}%{_bindir}/%{srcname} %{buildroot}%{_sbindir}/%{srcname}-%{python3_version}
+ln -s ./%{srcname}-%{python3_version} %{buildroot}%{_sbindir}/%{srcname}-3
+%endif
+
+%py2_install
+mv %{buildroot}%{_bindir}/%{srcname} %{buildroot}%{_sbindir}/%{srcname}-%{python2_version}
+ln -s ./%{srcname}-%{python2_version} %{buildroot}%{_sbindir}/%{srcname}-2
+# Symbolic link to default exabgp binary variant (python2)
+ln -s ./%{srcname}-2 %{buildroot}%{_sbindir}/%{srcname}
+
+%check
+%{__python2} setup.py test
+%if 0%{?with_python3}
+%{__python3} setup.py test
+%endif
 
 # Install health check
 install -p -D -m 0755 bin/healthcheck %{buildroot}%{_sbindir}
@@ -78,11 +123,21 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 %postun -n exabgp
 %systemd_postun_with_restart %{srcname}.service
 
+%files -n python2-%{srcname}
+%doc CHANGELOG README.md
+%{python2_sitelib}/*
+# XXX: when python3 variant becomes default, move next line to python3 subpackage
+%{_sbindir}/%{srcname}
+%{_sbindir}/%{srcname}-2*
+%license COPYRIGHT
 
+%if 0%{?with_python3}
 %files -n python3-%{srcname}
+%{python3_sitelib}/*
+%{_sbindir}/%{srcname}-3*
 %doc CHANGELOG README.md
 %license COPYRIGHT
-%{python3_sitelib}/*
+%endif
 
 # Let's split out exabgp service here
 %files -n exabgp
@@ -124,7 +179,7 @@ install doc/man/exabgp.conf.5 %{buildroot}/%{_mandir}/man5
 * Thu Jul 27 2017 Fedora Release Engineering <releng@fedoraproject.org> - 4.0.1-3
 - Rebuilt for https://fedoraproject.org/wiki/Fedora_27_Mass_Rebuild
 
-* Fri Jul 10 2017 Luke Hinds <lhinds@redhat.com> - 4.0.1-2
+* Mon Jul 10 2017 Luke Hinds <lhinds@redhat.com> - 4.0.1-2
 - Fixed dependency issues
 * Fri Jul 07 2017 Luke Hinds <lhinds@redhat.com> - 4.0.1
 - 4.0.1 release, and python 3 support
